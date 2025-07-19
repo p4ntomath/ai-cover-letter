@@ -80,6 +80,77 @@ sudo systemctl restart job-scraper cover-letter text-extractor ai-generator
 - Use IAM roles for production secrets
 - Enable HTTPS with Let's Encrypt (optional)
 
+## HTTPS/SSL Setup (Optional but Recommended)
+
+To secure your application with HTTPS and resolve browser security warnings:
+
+### Option 1: Automatic SSL Setup (Recommended)
+```bash
+# Upload and run the SSL setup script
+scp -i your-key.pem setup-ssl.sh ubuntu@your-ec2-ip:/home/ubuntu/
+ssh -i your-key.pem ubuntu@your-ec2-ip
+chmod +x setup-ssl.sh
+sudo ./setup-ssl.sh
+```
+
+The script will:
+- Install Let's Encrypt (Certbot) for free SSL certificates
+- Generate SSL certificate (Let's Encrypt for domains, self-signed for IP addresses)
+- Configure Nginx for HTTPS with security headers
+- Set up automatic HTTP to HTTPS redirect
+- Configure automatic certificate renewal
+
+### Option 2: Manual Domain Setup
+If you have a domain name pointing to your EC2 instance:
+
+1. **Point your domain to EC2**:
+   - Add an A record in your DNS settings pointing to your EC2 public IP
+   - Wait for DNS propagation (5-30 minutes)
+
+2. **Run SSL setup with domain**:
+   ```bash
+   sudo ./setup-ssl.sh
+   # Enter your domain name when prompted (e.g., myapp.example.com)
+   ```
+
+3. **Access your secure site**:
+   ```
+   https://yourdomain.com
+   ```
+
+### Option 3: IP Address with Self-Signed Certificate
+For IP-based access (current setup):
+
+1. **Run SSL setup without domain**:
+   ```bash
+   sudo ./setup-ssl.sh
+   # Press Enter when prompted for domain (uses IP address)
+   ```
+
+2. **Access with browser warning**:
+   - Visit: `https://13.61.22.198`
+   - Click "Advanced" then "Proceed to 13.61.22.198 (unsafe)"
+   - Browser will remember your choice
+
+### Security Features Included:
+- **TLS 1.2/1.3 encryption**
+- **HTTP to HTTPS redirect**
+- **Security headers**: HSTS, X-Frame-Options, X-Content-Type-Options
+- **Automatic certificate renewal** (Let's Encrypt only)
+- **Modern SSL ciphers**
+
+### Verification:
+After setup, test your secure site:
+```bash
+# Test HTTPS
+curl -I https://your-domain-or-ip
+
+# Test HTTP redirect
+curl -I http://your-domain-or-ip
+```
+
+You should see a 301 redirect from HTTP to HTTPS.
+
 ## Access Your Application
-- HTTP: `http://your-ec2-ip`
-- API Health: `http://your-ec2-ip/api/scraper/health`
+- **Secure (HTTPS)**: `https://13.61.22.198` or `https://yourdomain.com`
+- **API Health**: `https://13.61.22.198/api/scraper/health`
