@@ -177,6 +177,7 @@ Return the result in this exact JSON format:
             if not client:
                 raise Exception("AI client not available - check GITHUB_TOKEN")
             
+            print("Sending request to GitHub AI Models...")
             response = client.complete(
                 messages=[
                     SystemMessage(system_prompt),
@@ -186,49 +187,107 @@ Return the result in this exact JSON format:
                 top_p=0.9,
                 model=model
             )
-            ai_response = response.choices[0].message.content.strip()
             
-            # Debug logging
-            print(f"AI Service: github")
-            print(f"AI Response type: {type(ai_response)}")
-            print(f"AI Response content: {ai_response[:500]}...")  # First 500 chars
+            # Get the raw response
+            ai_response = response.choices[0].message.content
+            
+            # Debug logging with more details
+            print("AI Response received")
+            print(f"Response type: {type(ai_response)}")
+            print(f"Response length: {len(ai_response) if ai_response else 'None'}")
+            print(f"First 200 chars: {ai_response[:200] if ai_response else 'None'}...")
+            
+            # Validate we got a response
+            if not ai_response:
+                return {
+                    "success": False,
+                    "error": "AI returned empty response",
+                    "raw_response": str(ai_response)
+                }
+            
+            # Clean up the response
+            cleaned_response = ai_response.strip()
+            
+            # Remove markdown code blocks if present
+            if cleaned_response.startswith('```json'):
+                cleaned_response = cleaned_response.replace('```json', '').replace('```', '').strip()
+            elif cleaned_response.startswith('```'):
+                cleaned_response = cleaned_response.replace('```', '').strip()
+            
+            # Remove any surrounding quotes if the entire response is quoted
+            if cleaned_response.startswith('"') and cleaned_response.endswith('"') and cleaned_response.count('"') == 2:
+                cleaned_response = cleaned_response[1:-1]
+            
+            print(f"Cleaned response length: {len(cleaned_response)}")
+            print(f"Cleaned first 200 chars: {cleaned_response[:200]}...")
             
             # Try to parse as JSON
             try:
-                # Remove any potential markdown formatting
-                if ai_response.startswith('```json'):
-                    ai_response = ai_response.replace('```json', '').replace('```', '').strip()
-                elif ai_response.startswith('```'):
-                    ai_response = ai_response.replace('```', '').strip()
-                
-                # Additional cleanup for common formatting issues
-                ai_response = ai_response.strip()
-                if ai_response.startswith('"') and ai_response.endswith('"'):
-                    ai_response = ai_response[1:-1]  # Remove surrounding quotes if present
-                
-                extracted_data = json.loads(ai_response)
+                extracted_data = json.loads(cleaned_response)
+                print("JSON parsing successful")
+                print(f"Extracted data type: {type(extracted_data)}")
                 
                 # Validate that we got a dictionary
                 if not isinstance(extracted_data, dict):
                     return {
                         "success": False,
                         "error": f"AI returned {type(extracted_data).__name__} instead of expected dictionary",
-                        "raw_response": ai_response
+                        "raw_response": ai_response,
+                        "cleaned_response": cleaned_response
                     }
                 
+                # Validate required fields are present
+                required_fields = ['your_name', 'your_email', 'your_phone', 'company_name', 'position_title', 'body_paragraphs']
+                missing_fields = [field for field in required_fields if field not in extracted_data]
+                
+                if missing_fields:
+                    return {
+                        "success": False,
+                        "error": f"Missing required fields: {missing_fields}",
+                        "raw_response": ai_response,
+                        "extracted_data": extracted_data
+                    }
+                
+                print("All required fields present")
                 return {
                     "success": True,
                     "data": extracted_data,
                     "confidence": "high"
                 }
+                
             except json.JSONDecodeError as e:
+                print(f"JSON parsing failed: {str(e)}")
+                
+                # Try to extract JSON from within the response
+                try:
+                    # Look for JSON-like content between curly braces
+                    import re
+                    json_match = re.search(r'\{.*\}', cleaned_response, re.DOTALL)
+                    if json_match:
+                        json_content = json_match.group(0)
+                        print(f"Found JSON content: {json_content[:200]}...")
+                        extracted_data = json.loads(json_content)
+                        
+                        if isinstance(extracted_data, dict):
+                            print("JSON extraction successful from regex")
+                            return {
+                                "success": True,
+                                "data": extracted_data,
+                                "confidence": "medium"
+                            }
+                except:
+                    pass
+                
                 return {
                     "success": False,
                     "error": f"Failed to parse AI response as JSON: {str(e)}",
-                    "raw_response": ai_response
+                    "raw_response": ai_response,
+                    "cleaned_response": cleaned_response,
+                    "json_error": str(e)
                 }
                 
         except Exception as e:
+            print(f"AI analysis exception: {str(e)}")
             return {
                 "success": False,
                 "error": f"AI analysis failed: {str(e)}"
