@@ -432,13 +432,13 @@
                         // NO AUTOMATIC DOWNLOAD - User clicks when ready
                     } else {
                         const errorData = await coverLetterResponse.json();
-                        showStatus(statusDiv, `❌ Error generating DOCX: ${errorData.detail}`, 'error');
+                        showStatus(statusDiv, `Error generating DOCX: ${errorData.detail}`, 'error');
                     }
                 } else {
-                    showStatus(statusDiv, `❌ AI Analysis Error: ${analyzeResult.error_message}`, 'error');
+                    showStatus(statusDiv, `AI Analysis Error: ${analyzeResult.error_message}`, 'error');
                 }
             } catch (error) {
-                showStatus(statusDiv, `❌ Error: ${error.message}`, 'error');
+                showStatus(statusDiv, `Error: ${error.message}`, 'error');
             }
         }
         

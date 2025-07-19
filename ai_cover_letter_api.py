@@ -190,6 +190,7 @@ Return the result in this exact JSON format:
                 model=model
             )
             
+            
             # Get the raw response
             ai_response = response.choices[0].message.content
             
