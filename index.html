@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cover Letter Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen p-6">
+    <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 p-6">
+            <h1 class="text-2xl font-semibold text-gray-900">AI Cover Letter Generator</h1>
+            <p class="text-gray-600 mt-1">Upload your resume and job description to generate a personalized cover letter</p>
+        </div>
+        
+        <div class="p-6">
+            <!-- API Status -->
+            <div class="grid grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded border">
+                <div class="text-center">
+                    <span class="inline-block w-2 h-2 rounded-full mr-2" id="jobScraperStatus"></span>
+                    <span class="text-xs text-gray-600">Job Scraper</span>
+                </div>
+                <div class="text-center">
+                    <span class="inline-block w-2 h-2 rounded-full mr-2" id="coverLetterStatus"></span>
+                    <span class="text-xs text-gray-600">Cover Letter</span>
+                </div>
+                <div class="text-center">
+                    <span class="inline-block w-2 h-2 rounded-full mr-2" id="textExtractorStatus"></span>
+                    <span class="text-xs text-gray-600">Text Extractor</span>
+                </div>
+                <div class="text-center">
+                    <span class="inline-block w-2 h-2 rounded-full mr-2" id="aiGeneratorStatus"></span>
+                    <span class="text-xs text-gray-600">AI Generator</span>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="bg-gray-200 h-1 rounded mb-6">
+                <div class="bg-blue-500 h-full w-0 transition-all duration-300" id="progressFill"></div>
+            </div>
+            
+            <!-- Step 1: Upload Resume -->
+            <div class="mb-6 p-4 border border-gray-200 rounded" id="step1">
+                <div class="flex items-center mb-4">
+                    <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">1</div>
+                    <h3 class="text-lg font-medium text-gray-900">Upload Resume</h3>
+                </div>
+                <div class="mb-3">
+                    <label for="resumeFile" class="block text-sm font-medium text-gray-700 mb-2">Select your resume (PDF or DOCX):</label>
+                    <input type="file" id="resumeFile" accept=".pdf,.docx" required 
+                           class="w-full p-2 border border-gray-300 rounded text-sm focus:border-blue-500 focus:outline-none">
+                </div>
+                <button onclick="uploadResume(event)" type="button"
+                        class="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600">
+                    Extract Text
+                </button>
+                <div id="resumeStatus" class="mt-3"></div>
+            </div>
+            
+            <!-- Step 2: Job Description -->
+            <div class="mb-6 p-4 border border-gray-200 rounded" id="step2">
+                <div class="flex items-center mb-4">
+                    <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">2</div>
+                    <h3 class="text-lg font-medium text-gray-900">Job Description</h3>
+                </div>
+                <div class="mb-3">
+                    <label for="jobUrl" class="block text-sm font-medium text-gray-700 mb-2">LinkedIn Job URL:</label>
+                    <input type="url" id="jobUrl" placeholder="https://www.linkedin.com/jobs/view/..." 
+                           class="w-full p-2 border border-gray-300 rounded text-sm focus:border-blue-500 focus:outline-none">
+                    <button onclick="scrapeJobDescription(event)" type="button"
+                            class="mt-2 bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600">
+                        Scrape Job
+                    </button>
+                </div>
+                <div class="my-3 text-center text-gray-500 text-sm">OR</div>
+                <div class="mb-3">
+                    <label for="jobText" class="block text-sm font-medium text-gray-700 mb-2">Paste Job Description:</label>
+                    <textarea id="jobText" placeholder="Paste the job description here..." 
+                              class="w-full p-2 border border-gray-300 rounded text-sm focus:border-blue-500 focus:outline-none resize-y min-h-24"></textarea>
+                </div>
+                <div id="jobStatus" class="mt-3"></div>
+            </div>
+            
+            <!-- Step 3: Generate Cover Letter -->
+            <div class="mb-6 p-4 border border-gray-200 rounded" id="step3">
+                <div class="flex items-center mb-4">
+                    <div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium mr-3">3</div>
+                    <h3 class="text-lg font-medium text-gray-900">Generate Cover Letter</h3>
+                </div>
+                <button onclick="generateCoverLetter(event)" id="generateBtn" disabled type="button"
+                        class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    Generate Cover Letter
+                </button>
+                <div id="generationStatus" class="mt-4"></div>
+                <div id="resultPreview" class="hidden bg-gray-50 p-4 rounded mt-4"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // API endpoints - Updated for production
+        const APIs = {
+            jobScraper: window.location.origin + '/api/scraper',
+            coverLetter: window.location.origin + '/api/cover-letter', 
+            textExtractor: window.location.origin + '/api/text-extractor',
+            aiGenerator: window.location.origin + '/api/ai-generator'
+        };
+        
+        // Global variables to preserve state
+        let resumeText = '';
+        let jobDescriptionText = '';
+        let extractedData = null;
+        let resumeFileName = '';
+        let isProcessing = false;
+        let downloadBlob = null;
+        let downloadFilename = '';
+        
+        // Preserve form state
+        function preserveFormState() {
+            // Keep the job description text visible
+            const jobTextArea = document.getElementById('jobText');
+            if (jobDescriptionText && !jobTextArea.value) {
+                jobTextArea.value = jobDescriptionText;
+            }
+            
+            // Keep the URL visible if it was used
+            const jobUrl = document.getElementById('jobUrl');
+            if (jobUrl.value) {
+                // URL is already preserved in the input field
+            }
+            
+            // Keep file name visible
+            const fileInput = document.getElementById('resumeFile');
+            if (resumeFileName && fileInput.files.length === 0) {
+                // Show that a file was previously selected
+                const statusDiv = document.getElementById('resumeStatus');
+                if (resumeText) {
+                    showStatus(statusDiv, `✅ Resume text extracted successfully! (${resumeText.length} characters) - File: ${resumeFileName}`, 'success');
+                }
+            }
+        }
+        
+        // Check API status on load
+        window.onload = function() {
+            checkAPIStatus();
+            // Restore state if page was refreshed
+            preserveFormState();
+        };
+        
+        async function checkAPIStatus() {
+            const services = [
+                { name: 'jobScraperStatus', url: `${APIs.jobScraper}/health` },
+                { name: 'coverLetterStatus', url: `${APIs.coverLetter}/health` },
+                { name: 'textExtractorStatus', url: `${APIs.textExtractor}/health` },
+                { name: 'aiGeneratorStatus', url: `${APIs.aiGenerator}/health` }
+            ];
+            
+            for (let service of services) {
+                try {
+                    const response = await fetch(service.url);
+                    const statusDot = document.getElementById(service.name);
+                    if (response.ok) {
+                        statusDot.className = 'inline-block w-2 h-2 rounded-full mr-2 bg-green-500';
+                    } else {
+                        statusDot.className = 'inline-block w-2 h-2 rounded-full mr-2 bg-red-500';
+                    }
+                } catch (error) {
+                    document.getElementById(service.name).className = 'inline-block w-2 h-2 rounded-full mr-2 bg-red-500';
+                }
+            }
+        }
+        
+        async function uploadResume(event) {
+            if (event) event.preventDefault();
+            
+            const fileInput = document.getElementById('resumeFile');
+            const statusDiv = document.getElementById('resumeStatus');
+            
+            if (!fileInput.files[0]) {
+                showStatus(statusDiv, 'Please select a resume file', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            showStatus(statusDiv, 'Extracting text from resume...', 'info', true);
+            updateProgress(25);
+            
+            try {
+                const response = await fetch(`${APIs.textExtractor}/extract-text-only`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resumeText = result.text;
+                    resumeFileName = fileInput.files[0].name;
+                    showStatus(statusDiv, `✅ Resume text extracted successfully! (${result.text.length} characters)`, 'success');
+                    updateProgress(50);
+                    checkReadyToGenerate();
+                } else {
+                    showStatus(statusDiv, `❌ Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus(statusDiv, `❌ Error extracting resume: ${error.message}`, 'error');
+            }
+        }
+        
+        async function scrapeJobDescription(event) {
+            if (event) event.preventDefault();
+            
+            const jobUrl = document.getElementById('jobUrl').value;
+            const statusDiv = document.getElementById('jobStatus');
+            
+            if (!jobUrl) {
+                showStatus(statusDiv, 'Please enter a LinkedIn job URL', 'error');
+                return;
+            }
+            
+            showStatus(statusDiv, 'Scraping job description from LinkedIn...', 'info', true);
+            
+            try {
+                const response = await fetch(`${APIs.jobScraper}/scrape`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: jobUrl })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    jobDescriptionText = result.job_description;
+                    document.getElementById('jobText').value = result.job_description;
+                    showStatus(statusDiv, `✅ Job description scraped successfully! (${result.word_count} words)`, 'success');
+                    updateProgress(75);
+                    checkReadyToGenerate();
+                } else {
+                    showStatus(statusDiv, `❌ Error: ${result.error_message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(statusDiv, `❌ Error scraping job: ${error.message}`, 'error');
+            }
+        }
+        
+        function checkReadyToGenerate() {
+            const jobText = document.getElementById('jobText').value;
+            if (jobText) {
+                jobDescriptionText = jobText;
+            }
+            
+            const generateBtn = document.getElementById('generateBtn');
+            if (resumeText && jobDescriptionText) {
+                generateBtn.disabled = false;
+                updateProgress(75);
+            }
+        }
+        
+        // Check when job description text is manually entered
+        document.getElementById('jobText').addEventListener('input', function() {
+            if (this.value) {
+                jobDescriptionText = this.value;
+                checkReadyToGenerate();
+            }
+        });
+        
+        // Function to clear job-related data when starting with a new job
+        function clearJobData() {
+            jobDescriptionText = '';
+            extractedData = null;
+            
+            // Clear UI elements
+            document.getElementById('jobStatus').innerHTML = '';
+            document.getElementById('generationStatus').innerHTML = '';
+            document.getElementById('resultPreview').innerHTML = '';
+            document.getElementById('resultPreview').className = 'hidden bg-gray-50 p-4 rounded mt-4';
+            
+            // Reset generate button
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = true;
+            
+            // Reset progress if we have resume but no job
+            if (resumeText) {
+                updateProgress(50);
+            } else {
+                updateProgress(0);
+            }
+        }
+        
+        // Add event listener to URL input to detect new job entries
+        document.getElementById('jobUrl').addEventListener('input', function() {
+            if (this.value !== '') {
+                // Clear existing job text when user starts typing a new URL
+                document.getElementById('jobText').value = '';
+                clearJobData();
+            }
+        });
+        
+        // Modify the existing job text listener
+        document.getElementById('jobText').addEventListener('input', function() {
+            if (this.value !== '') {
+                // Clear URL when user starts typing job text
+                document.getElementById('jobUrl').value = '';
+                clearJobData();
+                
+                // Set new job description
+                jobDescriptionText = this.value;
+                checkReadyToGenerate();
+            } else {
+                clearJobData();
+            }
+        });
+        
+        async function generateCoverLetter(event) {
+            if (event) event.preventDefault();
+            
+            const statusDiv = document.getElementById('generationStatus');
+            const resultDiv = document.getElementById('resultPreview');
+            
+            if (!resumeText || !jobDescriptionText) {
+                showStatus(statusDiv, 'Please complete steps 1 and 2 first', 'error');
+                return;
+            }
+            
+            showStatus(statusDiv, 'AI is analyzing your resume and job description...', 'info', true);
+            updateProgress(90);
+            
+            // Step 1: AI Analysis to extract structured data
+            try {
+                const formData = new FormData();
+                
+                // Create a temporary file for the resume
+                const resumeBlob = new Blob([resumeText], { type: 'text/plain' });
+                formData.append('resume', resumeBlob, 'resume.txt');
+                formData.append('job_description_text', jobDescriptionText);
+                
+                const analyzeResponse = await fetch(`${APIs.aiGenerator}/analyze-documents`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const analyzeResult = await analyzeResponse.json();
+                
+                if (analyzeResult.success) {
+                    extractedData = analyzeResult.extracted_data;
+                    
+                    // Show preview
+                    resultDiv.innerHTML = `
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">📋 Extracted Information:</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <p class="text-sm"><span class="font-medium">Name:</span> ${extractedData.your_name}</p>
+                            <p class="text-sm"><span class="font-medium">Email:</span> ${extractedData.your_email}</p>
+                            <p class="text-sm"><span class="font-medium">Phone:</span> ${extractedData.your_phone}</p>
+                            <p class="text-sm"><span class="font-medium">Company:</span> ${extractedData.company_name}</p>
+                            <p class="text-sm col-span-1 md:col-span-2"><span class="font-medium">Position:</span> ${extractedData.position_title}</p>
+                        </div>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">✨ Generated Cover Letter Paragraphs:</h4>
+                        <div class="space-y-3">
+                            ${extractedData.body_paragraphs.map((para, index) => 
+                                `<div class="p-3 bg-blue-50 rounded-lg">
+                                    <p class="text-sm font-medium text-blue-800 mb-1">Paragraph ${index + 1}:</p>
+                                    <p class="text-sm text-gray-700">${para.substring(0, 150)}...</p>
+                                </div>`
+                            ).join('')}
+                        </div>
+                    `;
+                    resultDiv.className = 'bg-gray-50 p-6 rounded-lg mt-6 max-h-80 overflow-y-auto';
+                    
+                    showStatus(statusDiv, '✅ AI analysis complete! Generating professional DOCX file...', 'info', true);
+                    
+                    // Step 2: Send extracted data to Cover Letter API to generate DOCX
+                    const coverLetterResponse = await fetch(`${APIs.coverLetter}/generate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            your_name: extractedData.your_name,
+                            your_address: extractedData.your_address,
+                            your_email: extractedData.your_email,
+                            your_phone: extractedData.your_phone,
+                            employer_name: extractedData.employer_name,
+                            company_name: extractedData.company_name,
+                            company_address: extractedData.company_address,
+                            position_title: extractedData.position_title,
+                            body_paragraphs: extractedData.body_paragraphs,
+                            file_name: extractedData.file_name
+                        })
+                    });
+                    
+                    if (coverLetterResponse.ok) {
+                        const blob = await coverLetterResponse.blob();
+                        downloadBlob = blob;
+                        
+                        // Extract filename from response headers
+                        const contentDisposition = coverLetterResponse.headers.get('Content-Disposition');
+                        downloadFilename = contentDisposition 
+                            ? contentDisposition.split('filename=')[1].replace(/"/g, '')
+                            : extractedData.file_name || 'cover_letter.docx';
+                        
+                        // Create simple download section - NO AUTOMATIC DOWNLOAD
+                        statusDiv.innerHTML = `
+                            <div class="p-4 bg-green-50 border border-green-200 rounded">
+                                <p class="text-green-800 font-medium mb-3">🎉 Your personalized cover letter is ready!</p>
+                                <div class="flex flex-col gap-2">
+                                    <button onclick="manualDownload()" type="button" id="downloadBtn"
+                                            class="bg-green-600 text-white px-4 py-2 rounded text-center hover:bg-green-700">
+                                        📄 Download Cover Letter (${downloadFilename})
+                                    </button>
+                                    <button onclick="generateAnother()" type="button"
+                                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                                        🔄 Generate Another
+                                    </button>
+                                </div>
+                                <p class="text-green-700 text-sm mt-3">
+                                    ✅ All your data is preserved. Click download when ready.
+                                </p>
+                            </div>
+                        `;
+                        
+                        updateProgress(100);
+                        isProcessing = false;
+                        
+                        // Preserve all form data immediately
+                        preserveFormState();
+                        
+                        // NO AUTOMATIC DOWNLOAD - User clicks when ready
+                    } else {
+                        const errorData = await coverLetterResponse.json();
+                        showStatus(statusDiv, `❌ Error generating DOCX: ${errorData.detail}`, 'error');
+                    }
+                } else {
+                    showStatus(statusDiv, `❌ AI Analysis Error: ${analyzeResult.error_message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(statusDiv, `❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showStatus(element, message, type, loading = false) {
+            const loadingSpinner = loading ? '<div class="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>' : '';
+            
+            let bgColor, textColor, borderColor;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-green-50';
+                    textColor = 'text-green-800';
+                    borderColor = 'border-green-200';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-50';
+                    textColor = 'text-red-800';
+                    borderColor = 'border-red-200';
+                    break;
+                case 'info':
+                default:
+                    bgColor = 'bg-blue-50';
+                    textColor = 'text-blue-800';
+                    borderColor = 'border-blue-200';
+                    break;
+            }
+            
+            element.innerHTML = `<div class="p-4 ${bgColor} ${textColor} border ${borderColor} rounded-lg font-medium">${loadingSpinner}${message}</div>`;
+        }
+        
+        function updateProgress(percentage) {
+            document.getElementById('progressFill').style.width = percentage + '%';
+        }
+        
+        // Function to generate another cover letter with preserved data
+        function generateAnother() {
+            // Clear only the generation status and result preview
+            document.getElementById('generationStatus').innerHTML = '';
+            document.getElementById('resultPreview').innerHTML = '';
+            document.getElementById('resultPreview').className = 'hidden bg-gray-50 p-6 rounded-lg mt-6 max-h-80 overflow-y-auto';
+            
+            // Reset progress to 75% (ready to generate)
+            updateProgress(75);
+            
+            // Keep all form data intact - just enable the generate button
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = false;
+            
+            // Show message that data is preserved
+            const statusDiv = document.getElementById('generationStatus');
+            showStatus(statusDiv, '🔄 Ready to generate another cover letter! Your resume and job description are preserved.', 'info');
+            
+            // Scroll to the generate button
+            document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // BULLETPROOF: Completely prevent any page refresh
+        // Override all potential refresh triggers
+        window.addEventListener('load', function() {
+            // Disable all form-related refreshes
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+        
+        // Intercept and prevent ALL navigation attempts
+        window.addEventListener('beforeunload', function(e) {
+            if (downloadBlob || isProcessing) {
+                e.preventDefault();
+                e.returnValue = 'Are you sure you want to leave? Your download may be interrupted.';
+                return e.returnValue;
+            }
+        });
+        
+        // Prevent any clicks that might cause refresh
+        document.addEventListener('click', function(e) {
+            if (e.target.type === 'submit') {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // Prevent any form submissions
+        document.addEventListener('submit', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Prevent any accidental form resets
+        document.addEventListener('reset', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        function manualDownload() {
+            if (downloadBlob) {
+                // Create a temporary URL for the blob
+                const url = window.URL.createObjectURL(downloadBlob);
+                
+                // Create a link element
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = downloadFilename || 'cover_letter.docx';
+                
+                // Append to the document and trigger download
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
+        }
+    </script>
+</body>
+</html>
