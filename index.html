@@ -136,7 +136,7 @@
                 // Show that a file was previously selected
                 const statusDiv = document.getElementById('resumeStatus');
                 if (resumeText) {
-                    showStatus(statusDiv, `✅ Resume text extracted successfully! (${resumeText.length} characters) - File: ${resumeFileName}`, 'success');
+                    showStatus(statusDiv, `Resume text extracted successfully! (${resumeText.length} characters) - File: ${resumeFileName}`, 'success');
                 }
             }
         }
@@ -199,14 +199,14 @@
                 if (response.ok) {
                     resumeText = result.text;
                     resumeFileName = fileInput.files[0].name;
-                    showStatus(statusDiv, `✅ Resume text extracted successfully! (${result.text.length} characters)`, 'success');
+                    showStatus(statusDiv, ` Resume text extracted successfully! (${result.text.length} characters)`, 'success');
                     updateProgress(50);
                     checkReadyToGenerate();
                 } else {
-                    showStatus(statusDiv, `❌ Error: ${result.detail}`, 'error');
+                    showStatus(statusDiv, `Error: ${result.detail}`, 'error');
                 }
             } catch (error) {
-                showStatus(statusDiv, `❌ Error extracting resume: ${error.message}`, 'error');
+                showStatus(statusDiv, ` Error extracting resume: ${error.message}`, 'error');
             }
         }
         
@@ -237,14 +237,14 @@
                 if (result.success) {
                     jobDescriptionText = result.job_description;
                     document.getElementById('jobText').value = result.job_description;
-                    showStatus(statusDiv, `✅ Job description scraped successfully! (${result.word_count} words)`, 'success');
+                    showStatus(statusDiv, `Job description scraped successfully! (${result.word_count} words)`, 'success');
                     updateProgress(75);
                     checkReadyToGenerate();
                 } else {
-                    showStatus(statusDiv, `❌ Error: ${result.error_message}`, 'error');
+                    showStatus(statusDiv, `Error: ${result.error_message}`, 'error');
                 }
             } catch (error) {
-                showStatus(statusDiv, `❌ Error scraping job: ${error.message}`, 'error');
+                showStatus(statusDiv, `Error scraping job: ${error.message}`, 'error');
             }
         }
         
@@ -351,7 +351,7 @@
                     
                     // Show preview
                     resultDiv.innerHTML = `
-                        <h4 class="text-lg font-semibold text-gray-800 mb-4">📋 Extracted Information:</h4>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-4">Extracted Information:</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <p class="text-sm"><span class="font-medium">Name:</span> ${extractedData.your_name}</p>
                             <p class="text-sm"><span class="font-medium">Email:</span> ${extractedData.your_email}</p>
@@ -371,7 +371,7 @@
                     `;
                     resultDiv.className = 'bg-gray-50 p-6 rounded-lg mt-6 max-h-80 overflow-y-auto';
                     
-                    showStatus(statusDiv, '✅ AI analysis complete! Generating professional DOCX file...', 'info', true);
+                    showStatus(statusDiv, ' AI analysis complete! Generating professional DOCX file...', 'info', true);
                     
                     // Step 2: Send extracted data to Cover Letter API to generate DOCX
                     const coverLetterResponse = await fetch(`${APIs.coverLetter}/generate`, {
@@ -406,19 +406,19 @@
                         // Create simple download section - NO AUTOMATIC DOWNLOAD
                         statusDiv.innerHTML = `
                             <div class="p-4 bg-green-50 border border-green-200 rounded">
-                                <p class="text-green-800 font-medium mb-3">🎉 Your personalized cover letter is ready!</p>
+                                <p class="text-green-800 font-medium mb-3"> Your personalized cover letter is ready!</p>
                                 <div class="flex flex-col gap-2">
                                     <button onclick="manualDownload()" type="button" id="downloadBtn"
                                             class="bg-green-600 text-white px-4 py-2 rounded text-center hover:bg-green-700">
-                                        📄 Download Cover Letter (${downloadFilename})
+                                        Download Cover Letter (${downloadFilename})
                                     </button>
                                     <button onclick="generateAnother()" type="button"
                                             class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                                        🔄 Generate Another
+                                        Generate Another
                                     </button>
                                 </div>
                                 <p class="text-green-700 text-sm mt-3">
-                                    ✅ All your data is preserved. Click download when ready.
+                                     All your data is preserved. Click download when ready.
                                 </p>
                             </div>
                         `;
@@ -488,7 +488,7 @@
             
             // Show message that data is preserved
             const statusDiv = document.getElementById('generationStatus');
-            showStatus(statusDiv, '🔄 Ready to generate another cover letter! Your resume and job description are preserved.', 'info');
+            showStatus(statusDiv, ' Ready to generate another cover letter! Your resume and job description are preserved.', 'info');
             
             // Scroll to the generate button
             document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
