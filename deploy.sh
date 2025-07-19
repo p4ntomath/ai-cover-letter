@@ -1,9 +1,22 @@
 #!/bin/bash
 
 # EC2 Deployment Script for AI Cover Letter Generator
-# Run this script on your EC2 instance
+# Run this script on your EC2 instance after cloning from GitHub
 
 echo "🚀 Starting AI Cover Letter Generator Deployment..."
+
+# Check if we're in the right directory
+if [ ! -f "requirements.txt" ]; then
+    echo "❌ Error: requirements.txt not found. Make sure you're in the project directory."
+    exit 1
+fi
+
+# Check if .env file exists
+if [ ! -f ".env" ]; then
+    echo "❌ Error: .env file not found! Please create it from .env.example"
+    echo "Run: cp .env.example .env && nano .env"
+    exit 1
+fi
 
 # Update system packages
 echo "📦 Updating system packages..."
@@ -11,17 +24,24 @@ sudo apt update && sudo apt upgrade -y
 
 # Install Python 3.11 and pip
 echo "🐍 Installing Python 3.11..."
-sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip
+sudo apt install -y python3.11 python3.11-venv python3.11-dev python3-pip git
 
 # Install system dependencies for PDF processing
 echo "📄 Installing system dependencies..."
 sudo apt install -y build-essential libpoppler-cpp-dev pkg-config python3-dev
 
-# Create application directory
+# Create application directory and copy files
 echo "📁 Setting up application directory..."
 sudo mkdir -p /opt/ai-cover-letter
 sudo chown $USER:$USER /opt/ai-cover-letter
+
+# Copy all files to deployment directory
+echo "📋 Copying project files..."
+cp -r * /opt/ai-cover-letter/
 cd /opt/ai-cover-letter
+
+# Set proper permissions for .env
+chmod 600 .env
 
 # Create Python virtual environment
 echo "🔧 Creating virtual environment..."
@@ -32,14 +52,6 @@ source venv/bin/activate
 echo "📋 Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
-
-# Set up environment variables
-echo "🔒 Setting up environment variables..."
-if [ ! -f .env ]; then
-    echo "⚠️  .env file not found! Please create it with your secrets."
-    echo "Use .env.example as a template."
-    exit 1
-fi
 
 # Create systemd service files
 echo "⚙️  Creating systemd services..."
@@ -128,11 +140,14 @@ EOF
 echo "🌐 Installing and configuring Nginx..."
 sudo apt install -y nginx
 
+# Get the current server IP for nginx config
+SERVER_IP=$(curl -s http://checkip.amazonaws.com)
+
 # Create Nginx configuration
 sudo tee /etc/nginx/sites-available/ai-cover-letter > /dev/null <<EOF
 server {
     listen 80;
-    server_name your-domain.com;  # Replace with your domain or IP
+    server_name ${SERVER_IP};  # Uses your EC2 public IP
 
     # Serve the frontend
     location / {
@@ -147,6 +162,7 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /api/cover-letter/ {
@@ -154,6 +170,7 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /api/text-extractor/ {
@@ -161,6 +178,7 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /api/ai-generator/ {
@@ -168,6 +186,7 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
@@ -193,5 +212,10 @@ sudo ufw allow 443   # HTTPS
 sudo ufw --force enable
 
 echo "✅ Deployment complete!"
-echo "🌐 Your application should be available at http://your-ec2-ip"
+echo "🌐 Your application is available at: http://${SERVER_IP}"
 echo "📊 Check service status with: sudo systemctl status [service-name]"
+echo ""
+echo "📋 Quick commands:"
+echo "  Status: sudo systemctl status nginx job-scraper cover-letter text-extractor ai-generator"
+echo "  Logs: sudo journalctl -u [service-name] -f"
+echo "  Restart: sudo systemctl restart [service-name]"

@@ -9,10 +9,11 @@
 - **Security Group**: Allow ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
 
 ### 2. Local Preparation
-- [ ] Create `.env` file with your secrets
+- [ ] Push your project to GitHub repository
+- [ ] Create `.env.example` file with template variables
 - [ ] Test all APIs locally
 - [ ] Verify GitHub token works
-- [ ] Backup your project files
+- [ ] Ensure all secrets are in `.env` (not committed to GitHub)
 
 ## Deployment Steps
 
@@ -21,16 +22,18 @@
 ssh -i your-key.pem ubuntu@your-ec2-ip
 ```
 
-### Step 2: Upload Project Files
+### Step 2: Clone Project from GitHub
 ```bash
-# From your local machine
-scp -i your-key.pem -r * ubuntu@your-ec2-ip:/home/ubuntu/ai-cover-letter/
+# On EC2 instance
+cd /home/ubuntu
+git clone https://github.com/yourusername/your-repo-name.git ai-cover-letter
+cd ai-cover-letter
 ```
 
 ### Step 3: Create .env File on EC2
 ```bash
-# On EC2 instance
-cd /home/ubuntu/ai-cover-letter
+# Copy from example and edit with your secrets
+cp .env.example .env
 nano .env
 ```
 
@@ -50,6 +53,16 @@ sudo systemctl status nginx
 ```
 
 ## Post-Deployment
+
+### Updates and Redeployment
+```bash
+# To update your application
+cd /opt/ai-cover-letter
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart job-scraper cover-letter text-extractor ai-generator
+```
 
 ### Service Management Commands
 - Check logs: `sudo journalctl -u service-name -f`
