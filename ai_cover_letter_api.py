@@ -178,10 +178,12 @@ Return the result in this exact JSON format:
                 raise Exception("AI client not available - check GITHUB_TOKEN")
             
             print("Sending request to GitHub AI Models...")
+            
+            # Fix for azure-ai-inference library issue - use proper message format
             response = client.complete(
                 messages=[
-                    SystemMessage(system_prompt),
-                    UserMessage(user_prompt),
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.7,
                 top_p=0.9,
