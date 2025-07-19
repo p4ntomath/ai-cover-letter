@@ -36,19 +36,21 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-# AI Configuration
-endpoint = "https://models.github.ai/inference"
-model = "openai/gpt-4.1"
+# GitHub AI Models setup
+github_token = os.environ.get("GITHUB_TOKEN")
 
-# Get GitHub token
-token = os.environ.get("GITHUB_TOKEN")
-if not token:
-    print("Warning: GITHUB_TOKEN not found in environment variables")
-
-client = ChatCompletionsClient(
-    endpoint=endpoint,
-    credential=AzureKeyCredential(token),
-) if token else None
+if github_token and github_token != "your_github_token_here":
+    endpoint = "https://models.github.ai/inference"
+    model = "gpt-4o"
+    
+    client = ChatCompletionsClient(
+        endpoint=endpoint,
+        credential=AzureKeyCredential(github_token),
+    )
+    print("✅ Using GitHub AI Models")
+else:
+    client = None
+    print("❌ Warning: No valid GITHUB_TOKEN found")
 
 # Response Models
 class CoverLetterData(BaseModel):
@@ -166,12 +168,14 @@ Return the result in this exact JSON format:
     @staticmethod
     def analyze_and_extract(resume_text: str, job_description: str) -> Dict[str, Any]:
         """Use AI to analyze resume and job description and extract structured data"""
-        if not client:
-            raise Exception("AI client not available - check GITHUB_TOKEN")
         
         try:
             system_prompt = AIPromptEngineer.create_system_prompt()
             user_prompt = AIPromptEngineer.create_user_prompt(resume_text, job_description)
+            
+            # Use GitHub AI Models
+            if not client:
+                raise Exception("AI client not available - check GITHUB_TOKEN")
             
             response = client.complete(
                 messages=[
@@ -182,9 +186,12 @@ Return the result in this exact JSON format:
                 top_p=0.9,
                 model=model
             )
-            
-            # Extract the response content
             ai_response = response.choices[0].message.content.strip()
+            
+            # Debug logging
+            print(f"AI Service: github")
+            print(f"AI Response type: {type(ai_response)}")
+            print(f"AI Response content: {ai_response[:500]}...")  # First 500 chars
             
             # Try to parse as JSON
             try:
@@ -194,7 +201,21 @@ Return the result in this exact JSON format:
                 elif ai_response.startswith('```'):
                     ai_response = ai_response.replace('```', '').strip()
                 
+                # Additional cleanup for common formatting issues
+                ai_response = ai_response.strip()
+                if ai_response.startswith('"') and ai_response.endswith('"'):
+                    ai_response = ai_response[1:-1]  # Remove surrounding quotes if present
+                
                 extracted_data = json.loads(ai_response)
+                
+                # Validate that we got a dictionary
+                if not isinstance(extracted_data, dict):
+                    return {
+                        "success": False,
+                        "error": f"AI returned {type(extracted_data).__name__} instead of expected dictionary",
+                        "raw_response": ai_response
+                    }
+                
                 return {
                     "success": True,
                     "data": extracted_data,
@@ -285,7 +306,11 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check"""
-    ai_status = "available" if client else "unavailable (missing GITHUB_TOKEN)"
+    if client:
+        ai_status = "✅ GitHub AI Models available"
+    else:
+        ai_status = "❌ No AI service available (check GITHUB_TOKEN)"
+    
     return {
         "status": "healthy",
         "ai_service": ai_status,
