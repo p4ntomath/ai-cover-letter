@@ -4,7 +4,6 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 lxml==4.9.3
 pydantic==2.5.0
-pyresparser
 python-dotenv==1.0.0
 azure-ai-inference==1.0.0b3
 azure-core>=1.30.0
