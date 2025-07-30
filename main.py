@@ -1,6 +1,4 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 
 # Import sub-apps
 from job_scraper_api import app as job_scraper_app

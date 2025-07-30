@@ -9,7 +9,6 @@ from docx import Document
 from docx.shared import Pt
 import uuid
 from datetime import datetime
-import uvicorn
 
 # Load environment variables
 load_dotenv()
