@@ -518,7 +518,4 @@ async def generate_ai_cover_letter(
 
 if __name__ == "__main__":
     print("Starting AI-Powered Cover Letter Generator...")
-    print("API will be available at: http://localhost:8003")
-    print("API documentation at: http://localhost:8003/docs")
     print(f"AI Service: {'✅ Available' if client else '❌ Unavailable (missing GITHUB_TOKEN)'}")
-    uvicorn.run(app, host="0.0.0.0", port=8003)

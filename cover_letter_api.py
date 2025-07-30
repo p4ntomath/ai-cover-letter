@@ -135,6 +135,3 @@ async def generate_cover_letter(data: CoverLetterRequest):
 
 if __name__ == "__main__":
     print("Starting Cover Letter Generator API...")
-    print("API will be available at: http://localhost:8001")
-    print("API documentation at: http://localhost:8001/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8001)

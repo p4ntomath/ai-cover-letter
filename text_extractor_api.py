@@ -364,7 +364,4 @@ async def extract_text_only(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     print("Starting Text Extractor API...")
-    print("API will be available at: http://localhost:8002")
-    print("API documentation at: http://localhost:8002/docs")
     print("Supported file types: PDF, DOCX")
-    uvicorn.run(app, host="0.0.0.0", port=8002)
