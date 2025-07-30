@@ -1,15 +1,12 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 import os
 import tempfile
 import pdfplumber
 from docx import Document
-import uvicorn
 from pathlib import Path
-import json
 
 # Initialize FastAPI app
 app = FastAPI(

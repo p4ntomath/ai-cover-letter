@@ -10,7 +10,6 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
 import json
 import tempfile
-import uvicorn
 from pathlib import Path
 import pdfplumber
 from docx import Document

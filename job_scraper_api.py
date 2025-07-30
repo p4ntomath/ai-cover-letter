@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 import re
 import time
 from typing import Optional
-import uvicorn
 
 # Initialize FastAPI app
 app = FastAPI(
