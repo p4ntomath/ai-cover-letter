@@ -166,48 +166,120 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4 --access-log --log-level
 
 ### Platform-Specific Deployment
 
-#### Render.com (Current Deployment)
-```bash
-# Build Command: (leave empty or use)
-pip install -r requirements.txt
+#### AWS Elastic Beanstalk (Recommended for Production)
 
-# Start Command:
-uvicorn main:app --host 0.0.0.0 --port $PORT
+AWS Elastic Beanstalk provides easy deployment and scaling for Python web applications with automatic load balancing, health monitoring, and auto-scaling.
+
+##### Prerequisites
+- AWS Account with appropriate permissions
+- AWS CLI installed (optional but recommended)
+- EB CLI installed (optional but recommended)
+
+##### Step 1: Prepare Your Application
+
+1. **Ensure you have the required files:**
+   ```
+   ├── main.py                    # Your FastAPI application
+   ├── requirements.txt           # Python dependencies
+   ├── Procfile                   # Process configuration
+   ├── .env                      # Environment variables
+   ├── static/                   # Static files
+   └── all your API files
+   ```
+
+2. **Verify your Procfile contains:**
+   ```
+   web: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+   ```
+
+3. **Check your environment variables in `.env`:**
+   ```
+   GITHUB_TOKEN=your_actual_github_token_here
+   ```
+
+##### Step 2: Create Deployment Package
+
+Create a deployment-ready ZIP file that excludes development files:
+
+```bash
+# Using Python (recommended for cross-platform compatibility)
+python -c "
+import zipfile
+import os
+
+with zipfile.ZipFile('eb-deployment.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+    # Add Python files
+    for file in ['main.py', 'ai_cover_letter_api.py', 'cover_letter_api.py', 'job_scraper_api.py', 'text_extractor_api.py']:
+        if os.path.exists(file):
+            zipf.write(file, file)
+    
+    # Add configuration files
+    for file in ['requirements.txt', 'Procfile', '.env']:
+        if os.path.exists(file):
+            zipf.write(file, file)
+    
+    # Add static directory
+    if os.path.exists('static'):
+        for root, dirs, files in os.walk('static'):
+            for file in files:
+                file_path = os.path.join(root, file)
+                archive_path = file_path.replace(os.sep, '/')
+                zipf.write(file_path, archive_path)
+
+print('Created eb-deployment.zip')
+"
 ```
 
-#### Heroku
-```bash
-# Create Procfile with:
-web: uvicorn main:app --host 0.0.0.0 --port $PORT
+##### Step 3: Deploy via AWS Console
 
-# Build Command: (automatic via requirements.txt)
-# Start Command: (automatic via Procfile)
-```
+1. **Login to AWS Console** and navigate to Elastic Beanstalk
 
-#### Railway
-```bash
-# Build Command:
-pip install -r requirements.txt
+2. **Create New Application:**
+   - Click "Create Application"
+   - Application name: `ai-cover-letter` (or your preferred name)
+   - Platform: Python
+   - Platform version: Python 3.11 running on 64bit Amazon Linux 2023
 
-# Start Command:
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
+3. **Upload Your Code:**
+   - Choose "Upload your code"
+   - Select your `eb-deployment.zip` file
+   - Version label: `v1.0` (or your preferred version)
 
-#### Docker Deployment
-```bash
-# Create Dockerfile (example):
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+4. **Configure Environment:**
+   - Environment name: `ai-cover-letter-prod` (or your preferred name)
+   - Domain: Will be auto-generated or you can customize
+   - Platform version: Latest Python 3.11
 
-# Build and run:
-docker build -t ai-cover-letter .
-docker run -p 8000:8000 ai-cover-letter
-```
+5. **Environment Variables:**
+   - Go to Configuration → Software
+   - Add environment variable:
+     - Name: `GITHUB_TOKEN`
+     - Value: Your actual GitHub token
+
+6. **Deploy:**
+   - Click "Create Environment"
+   - Wait for deployment (usually 5-10 minutes)
+
+
+
+##### Step 4: Verify Deployment
+
+1. **Check Health:**
+   - Your app should show "Ok" health status
+   - Access your app URL (provided after deployment)
+
+2. **Test Endpoints:**
+   ```bash
+   # Replace YOUR_EB_URL with your actual Elastic Beanstalk URL
+   curl https://YOUR_EB_URL.elasticbeanstalk.com/health
+   curl https://YOUR_EB_URL.elasticbeanstalk.com/docs
+   ```
+
+3. **Monitor Logs:**
+   - Go to Configuration → Logs → Request Logs
+   - Download logs to troubleshoot any issues
+
+
 
 ### Output Directory Structure
 

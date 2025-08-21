@@ -1,6 +1,8 @@
+# main.py
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 
 # Import sub-apps
 from job_scraper_api import app as job_scraper_app
@@ -16,10 +18,15 @@ app.mount("/api/cover", cover_letter_app)
 app.mount("/api/extract", text_extractor_app)
 app.mount("/api/ai", ai_cover_app)
 
-# Mount static files (e.g. JS, CSS, images)
+# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Serve index.html at root path
+# Serve index.html at root
 @app.get("/", response_class=FileResponse)
 async def serve_index():
     return "static/index.html"
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
