@@ -2,7 +2,7 @@
 
 An intelligent web application that generates personalized cover letters using AI analysis of resumes and job descriptions. The system includes LinkedIn job scraping, document text extraction, and AI-powered content generation.
 
-- **Deployed Site** : [ai-cover-letter-8jxb.onrender.com](http://ai-cover-letter.eu-north-1.elasticbeanstalk.com/)
+- **Deployed Site** : [http://ai-cover-letter.eu-north-1.elasticbeanstalk.com/](http://ai-cover-letter.eu-north-1.elasticbeanstalk.com/)
 
 ## Features
 
